@@ -1,8 +1,11 @@
 import bs4
 import sys
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from collections import OrderedDict
+import tkinter
+import tkinter.filedialog
+import tkinter.scrolledtext
 
 
 @dataclass
@@ -24,10 +27,12 @@ class Report:
     months: List[Month]
 
 
-def get_report(file_path) -> Report:
+def get_report(file_path) -> Optional[Report]:
     document = open(file_path, encoding="utf-8").read()
     soup = bs4.BeautifulSoup(document, "html.parser")
     tables = soup.find_all("table")
+    if not tables:
+        return None
     month_descriptions = OrderedDict()
     for table in tables:
         title = table.find_previous("div").text
@@ -65,10 +70,33 @@ def get_report(file_path) -> Report:
     ])
 
 
-report = get_report(sys.argv[1])
-for month in report.months:
-    taught_lessons_number = (
-        month.days_amount * report.workers_amount
-        - month.skipped_lessons_amount
-    )
-    print(f"{month.name}: {taught_lessons_number} отработанных дней")
+def ask_for_file():
+    file_path = tkinter.filedialog.askopenfilename()
+    report = get_report(file_path)
+    if report is None:
+        report_text.delete("1.0", tkinter.END)
+        report_text.insert(tkinter.INSERT, "Это не отчёт!")
+    else:
+        report_string_lines = []
+        for month in report.months:
+            taught_lessons_number = (
+                month.days_amount * report.workers_amount
+                - month.skipped_lessons_amount
+            )
+            report_string_lines.append(
+                f"{month.name}: {taught_lessons_number} отработанных дней"
+            )
+        report_text.delete("1.0", tkinter.END)
+        report_text.insert(tkinter.INSERT, "\n".join(report_string_lines))
+
+
+window = tkinter.Tk()
+window.title("Счётчик рабочих часов")
+window.geometry("500x500")
+tkinter.Button(text="Выбрать таблицу", command=ask_for_file).pack(
+    padx=10, pady=10
+)
+report_text = tkinter.scrolledtext.ScrolledText()
+report_text.pack(fill="both", expand=True)
+
+window.mainloop()
