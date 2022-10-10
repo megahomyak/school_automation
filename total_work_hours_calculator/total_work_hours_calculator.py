@@ -42,7 +42,7 @@ def get_report(file_path) -> Optional[Report]:
                 # Removing the service rows (yes, even "August" is a service row)
                 lambda m: m.text in (
                     "Сентябрь", "Октябрь", "Ноябрь", "Декабрь", "Январь",
-                    "Февраль", "Март", "Апрель", "Май"
+                    "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль"
                 ),
                 rows[0].find_all("th"),  # Headings row
             )
