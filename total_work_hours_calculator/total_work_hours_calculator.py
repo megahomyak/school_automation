@@ -78,14 +78,17 @@ def ask_for_file():
         report_text.insert(tkinter.INSERT, "Это не отчёт!")
     else:
         report_string_lines = []
+        total_hours_amount = 0
         for month in report.months:
-            taught_lessons_number = (
+            hours_amount = (
                 month.days_amount * report.workers_amount
                 - month.skipped_lessons_amount
             )
+            total_hours_amount += hours_amount
             report_string_lines.append(
-                f"{month.name}: {taught_lessons_number} отработанных дней"
+                f"{month.name}: {hours_amount} человекочасов"
             )
+        report_string_lines.append(f"Итого: {total_hours_amount} человекочасов")
         report_text.delete("1.0", tkinter.END)
         report_text.insert(tkinter.INSERT, "\n".join(report_string_lines))
 
