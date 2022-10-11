@@ -83,13 +83,14 @@ HEADERS = ["Январь", "Февраль", "Март", "Апрель", "Май
 
 def ask_for_a_report():
     file_path = tkinter.filedialog.askopenfilename()
-    report = get_report(file_path)
-    if report is None:
-        tkinter.messagebox.showerror("Неподходящий файл", "Выбранный файл не является отчётом!")
-    else:
-        subject_to_report[report.subject] = report
-        report_text.delete("1.0", tkinter.END)
-        report_text.insert(tkinter.INSERT, "\n".join(subject_to_report.keys()))
+    if file_path:
+        report = get_report(file_path)
+        if report is None:
+            tkinter.messagebox.showerror("Неподходящий файл", "Выбранный файл не является отчётом!")
+        else:
+            subject_to_report[report.subject] = report
+            report_text.delete("1.0", tkinter.END)
+            report_text.insert(tkinter.INSERT, "\n".join(subject_to_report.keys()))
 
 
 def save_the_report():
