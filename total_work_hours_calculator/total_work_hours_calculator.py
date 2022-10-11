@@ -126,7 +126,7 @@ def save_the_report():
             file_number += 1
         else:
             break
-    with open(file_name, "w", encoding="utf-8") as f:
+    with open(file_name, "w", encoding="cp1251") as f:
         f.write("\n".join(lines))
     tkinter.messagebox.showinfo("Сохранено", f"Таблица сохранена в файл \"{file_name}\".")
 
