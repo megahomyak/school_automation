@@ -3,6 +3,7 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional
 from collections import OrderedDict
+import os
 import tkinter
 import tkinter.filedialog
 import tkinter.scrolledtext
@@ -23,6 +24,7 @@ class Month:
 
 @dataclass
 class Report:
+    subject: str
     workers_amount: int
     months: List[Month]
 
@@ -30,6 +32,10 @@ class Report:
 def get_report(file_path) -> Optional[Report]:
     document = open(file_path, encoding="utf-8").read()
     soup = bs4.BeautifulSoup(document, "html.parser")
+    try:
+        subject = soup.find("br").find_next("span").find_next("span").find_next("span").contents[1].strip()
+    except AttributeError:
+        return None
     tables = soup.find_all("table")
     if not tables:
         return None
@@ -64,39 +70,73 @@ def get_report(file_path) -> Optional[Report]:
                         if cell_text == "Н":
                             month_description.skipped_lessons_amount += 1
                 index_offset += days_amount
-    return Report(workers_amount, [
+    return Report(subject, workers_amount, [
         Month(name, description.days_amount, description.skipped_lessons_amount)
         for name, description in month_descriptions.items()
     ])
 
 
-def ask_for_file():
+subject_to_report = OrderedDict()
+
+HEADERS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+
+
+def ask_for_a_report():
     file_path = tkinter.filedialog.askopenfilename()
     report = get_report(file_path)
     if report is None:
-        report_text.delete("1.0", tkinter.END)
-        report_text.insert(tkinter.INSERT, "Это не отчёт!")
+        tkinter.messagebox.showerror("Неподходящий файл", "Выбранный файл не является отчётом!")
     else:
-        report_string_lines = []
-        total_hours_amount = 0
-        for month in report.months:
-            hours_amount = (
-                month.days_amount * report.workers_amount
-                - month.skipped_lessons_amount
-            )
-            total_hours_amount += hours_amount
-            report_string_lines.append(
-                f"{month.name}: {hours_amount} человекочасов"
-            )
-        report_string_lines.append(f"Итого: {total_hours_amount} человекочасов")
+        subject_to_report[report.subject] = report
         report_text.delete("1.0", tkinter.END)
-        report_text.insert(tkinter.INSERT, "\n".join(report_string_lines))
+        report_text.insert(tkinter.INSERT, "\n".join(subject_to_report.keys()))
+
+
+def save_the_report():
+    lines = [",".join([""] + HEADERS + ["Итого"])]
+    for report in subject_to_report.values():
+        month_name_to_contents = {}
+        for month in report.months:
+            month_name_to_contents[month.name] = month
+        hours = [report.subject]
+        total_hours_amount = 0
+        for month_name in HEADERS:
+            try:
+                month = month_name_to_contents[month_name]
+            except KeyError:
+                hours_amount_str = ""
+            else:
+                hours_amount = (
+                    month.days_amount * report.workers_amount
+                    - month.skipped_lessons_amount
+                )
+                total_hours_amount += hours_amount
+                hours_amount_str = str(hours_amount)
+            hours.append(hours_amount_str)
+        hours.append(str(total_hours_amount))
+        lines.append(",".join(hours))
+    file_number = 0
+    while True:
+        file_name = "report"
+        if file_number:
+            file_name += f" ({file_number})"
+        file_name += ".csv"
+        if os.path.exists(file_name):
+            file_number += 1
+        else:
+            break
+    with open(file_name, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    tkinter.messagebox.showinfo("Сохранено", f"Таблица сохранена в файл \"{file_name}\".")
 
 
 window = tkinter.Tk()
 window.title("Счётчик рабочих часов")
 window.geometry("500x500")
-tkinter.Button(text="Выбрать таблицу", command=ask_for_file).pack(
+tkinter.Button(text="Выбрать таблицу", command=ask_for_a_report).pack(
+    padx=10, pady=10
+)
+tkinter.Button(text="Сохранить", command=save_the_report).pack(
     padx=10, pady=10
 )
 report_text = tkinter.scrolledtext.ScrolledText()
