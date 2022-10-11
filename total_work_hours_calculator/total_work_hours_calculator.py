@@ -93,8 +93,11 @@ def ask_for_a_report():
             report_text.insert(tkinter.INSERT, "\n".join(subject_to_report.keys()))
 
 
+CSV_DELIMITER = ";"
+
+
 def save_the_report():
-    lines = [",".join([""] + HEADERS + ["Итого"])]
+    lines = [CSV_DELIMITER.join([""] + HEADERS + ["Итого"])]
     for report in subject_to_report.values():
         month_name_to_contents = {}
         for month in report.months:
@@ -115,7 +118,7 @@ def save_the_report():
                 hours_amount_str = str(hours_amount)
             hours.append(hours_amount_str)
         hours.append(str(total_hours_amount))
-        lines.append(",".join(hours))
+        lines.append(CSV_DELIMITER.join(hours))
     file_number = 0
     while True:
         file_name = "report"
