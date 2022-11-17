@@ -1,3 +1,4 @@
+import re
 import bs4
 import sys
 from dataclasses import dataclass
@@ -44,14 +45,15 @@ def get_report(file_path) -> Optional[Report]:
         title = table.find_previous("div").text
         if title.split(":")[0] == "Предмет":  # We need this table
             rows = table.find_all("tr")
-            months = filter(
+            months = list(filter(
                 # Removing the service rows (yes, even "August" is a service row)
                 lambda m: m.text in (
                     "Сентябрь", "Октябрь", "Ноябрь", "Декабрь", "Январь",
                     "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль"
                 ),
                 rows[0].find_all("th"),  # Headings row
-            )
+            ))
+            days = iter(map(lambda day: day.text, rows[1].find_all(True)))
             workers_amount = len(rows) - 2  # Rows_amount - headings_amount
             lesson_name = title.split(":")[1].strip()
             index_offset = 2  # Skipping the number and name columns
@@ -60,16 +62,19 @@ def get_report(file_path) -> Optional[Report]:
                 month_description = month_descriptions.setdefault(
                     month_name, MonthDescription(0, 0)
                 )
-                days_amount = int(month.attrs["colspan"])
-                month_description.days_amount += days_amount
+                stated_days_amount = int(month.attrs["colspan"])
+                # Looking at the day numbers, if one is weird - it is not a day, but a weirdly placed heading
+                day_numbers = (next(days) for _ in range(stated_days_amount))
+                actual_days_amount = len([day for day in day_numbers if re.fullmatch(r"\d+", day)])
+                month_description.days_amount += actual_days_amount
                 skipped_lessons_amount = 0
                 for row in rows[2:]:  # Cutting the heading
                     row = row.find_all("td")
-                    for i in range(days_amount):
+                    for i in range(actual_days_amount):
                         cell_text = row[index_offset + i].text.strip()
                         if cell_text == "Н":
                             month_description.skipped_lessons_amount += 1
-                index_offset += days_amount
+                index_offset += actual_days_amount
     return Report(subject, workers_amount, [
         Month(name, description.days_amount, description.skipped_lessons_amount)
         for name, description in month_descriptions.items()
@@ -145,5 +150,8 @@ tkinter.Button(text="Сохранить", command=save_the_report).pack(
 )
 report_text = tkinter.scrolledtext.ScrolledText()
 report_text.pack(fill="both", expand=True)
+
+print(get_report("../../Downloads/Распечатка журнала объединения (36).xls"))
+exit()
 
 window.mainloop()
