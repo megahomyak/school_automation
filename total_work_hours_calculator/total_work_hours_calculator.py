@@ -151,7 +151,4 @@ tkinter.Button(text="Сохранить", command=save_the_report).pack(
 report_text = tkinter.scrolledtext.ScrolledText()
 report_text.pack(fill="both", expand=True)
 
-print(get_report("../../Downloads/Распечатка журнала объединения (36).xls"))
-exit()
-
 window.mainloop()
