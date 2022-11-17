@@ -30,6 +30,9 @@ class Report:
     months: List[Month]
 
 
+MONTH_NAMES = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+
+
 def get_report(file_path) -> Optional[Report]:
     document = open(file_path, encoding="utf-8").read()
     soup = bs4.BeautifulSoup(document, "html.parser")
@@ -42,32 +45,30 @@ def get_report(file_path) -> Optional[Report]:
         return None
     month_descriptions = OrderedDict()
     for table in tables:
-        title = table.find_previous("div").text
-        if title.split(":")[0] == "Предмет":  # We need this table
+        full_title = table.find_previous("div").text
+        if full_title.split(":")[0] == "Предмет":  # We need this table
             rows = table.find_all("tr")
             months = list(filter(
-                # Removing the service rows (yes, even "August" is a service row)
-                lambda m: m.text in (
-                    "Сентябрь", "Октябрь", "Ноябрь", "Декабрь", "Январь",
-                    "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль"
-                ),
+                # Removing the service rows
+                lambda m: m.text in MONTH_NAMES,
                 rows[0].find_all("th"),  # Headings row
             ))
             days = iter(map(lambda day: day.text, rows[1].find_all(True)))
             workers_amount = len(rows) - 2  # Rows_amount - headings_amount
-            lesson_name = title.split(":")[1].strip()
             index_offset = 2  # Skipping the number and name columns
             for month in months:
                 month_name = month.text
-                month_description = month_descriptions.setdefault(
-                    month_name, MonthDescription(0, 0)
-                )
                 stated_days_amount = int(month.attrs["colspan"])
                 # Looking at the day numbers, if one is weird - it is not a day, but a weirdly placed heading
                 day_numbers = (next(days) for _ in range(stated_days_amount))
                 actual_days_amount = len([day for day in day_numbers if re.fullmatch(r"\d+", day)])
+                if actual_days_amount == 0:
+                    continue
+                month_description = month_descriptions.setdefault(
+                    month_name,
+                    MonthDescription(days_amount=0, skipped_lessons_amount=0)
+                )
                 month_description.days_amount += actual_days_amount
-                skipped_lessons_amount = 0
                 for row in rows[2:]:  # Cutting the heading
                     row = row.find_all("td")
                     for i in range(actual_days_amount):
@@ -82,8 +83,6 @@ def get_report(file_path) -> Optional[Report]:
 
 
 subject_to_report = OrderedDict()
-
-HEADERS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
 
 
 def ask_for_a_report():
@@ -102,14 +101,14 @@ CSV_DELIMITER = ";"
 
 
 def save_the_report():
-    lines = [CSV_DELIMITER.join([""] + HEADERS + ["Итого"])]
+    lines = [CSV_DELIMITER.join([""] + MONTH_NAMES + ["Итого"])]
     for report in subject_to_report.values():
         month_name_to_contents = {}
         for month in report.months:
             month_name_to_contents[month.name] = month
         hours = [report.subject]
         total_hours_amount = 0
-        for month_name in HEADERS:
+        for month_name in MONTH_NAMES:
             try:
                 month = month_name_to_contents[month_name]
             except KeyError:
