@@ -46,7 +46,7 @@ def get_report(file_path) -> Optional[Report]:
     month_descriptions = OrderedDict()
     for table in tables:
         full_title = table.find_previous("div").text
-        if full_title.split(":")[0] == "Предмет":  # We need this table
+        if full_title.split(":")[0].strip() == "Предмет":  # We need this table
             rows = table.find_all("tr")
             months = list(filter(
                 # Removing the service rows
